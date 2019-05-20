@@ -110,6 +110,20 @@ namespace aspect
           std::vector<std::pair<std::string, unsigned int> >
           get_property_information() const;
 
+          /**
+           * Declare the parameters this class takes through input files.
+           */
+          static
+          void
+          declare_parameters (ParameterHandler &prm);
+
+          /**
+           * Read the parameters this class declares from the parameter file.
+           */
+          virtual
+          void
+          parse_parameters (ParameterHandler &prm);
+
 	private:
         /**
          * Calculates derivatives of direction cosines and volume
@@ -121,6 +135,12 @@ namespace aspect
 				 unsigned int &n_grains,
 				 std::vector<double> &acs_odf_rt) const;
 
+        double stress_exp;  // stress exponent for power law rheology
+        double mob;  // grain boundary mobility M*
+        double lam;  // nucleation parameter lambda*
+        double chi;  // volume fraction chi
+        unsigned int n_grains;  // number of grains in aggregate, per particle
+        std::vector<double> tau;  // reference dimensionless resolved shear stresses
       };
     }
   }
@@ -139,7 +159,6 @@ namespace aspect
       GrainOrientations<dim>::initialize_one_particle_property(const Point<dim> &,
                                                     std::vector<double> &data) const
       {
-
 	// Order of particle data vector elements for this plugin:
 	//	n_grains (1 element) [number of grains in aggregate/particle]
 	//	Fij (9) [finite strain tensor, starts as identity]
@@ -147,7 +166,6 @@ namespace aspect
 	//		[direction cosines, volume fractions, stored strain energies]
 	//		values start as (9 random cosines), (1/n_grains), (0)
 
-	const unsigned int n_grains = 50;  // hard-coded for now; should be an input parameter
 	const double PI = 3.141592653589793;
 	data.push_back(n_grains);
 
@@ -479,13 +497,6 @@ namespace aspect
 	eijk[1][0][2] = -1;
 	eijk[2][1][0] = -1;
 
-	// some constants, hard-coded for now
-	const int stress_exp = 3.5;	// stress exponent
-	const int lam = 5;		// dimensionless nucleation parameter
-	const int mob = 125;		// dimensionless grain boundary mobility
-	const double chi = 0.3;		// dimensionless threshold volume fraction
-	const std::array<double,4> tau = {1, 2, 3, 1e+60};  // dimensionless resolved shear stresses for 4 olivine slip systems
-
 	std::vector<double> dot_all(11*n_grains,0);  // to hold dotted things and rt
 
 	double Emean = 0;  // start accounting for mean energy
@@ -667,7 +678,6 @@ namespace aspect
       std::vector<std::pair<std::string, unsigned int> >
       GrainOrientations<dim>::get_property_information() const
       {
-      const unsigned int n_grains = 50;  // hard-coded here too whoops
       std::vector<std::pair<std::string,unsigned int> > property_information (1,std::make_pair("n_grains",1));
 
 	for (unsigned int i=0; i<3; ++i)
@@ -689,6 +699,78 @@ namespace aspect
 	  }
 	  
 	return property_information;
+      }
+
+      template <int dim>
+      void
+      GrainOrientations<dim>::declare_parameters (ParameterHandler &prm)
+      {
+        prm.enter_subsection("Postprocess");
+	 {
+          prm.enter_subsection("Particles");
+	   {
+	     prm.enter_subsection("Grain orientations");
+	     {
+	       prm.declare_entry("Number of grains","500",Patterns::Integer(1),
+					"The number of grains in the aggregate carried on "
+					"each particle. Larger numbers are best for useful "
+					"statistics on fabric evolution.");
+              prm.declare_entry("Grain boundary mobility","125",Patterns::Double(0),
+					"Dimensionless grain boundary mobility parameter, "
+					"M*. A value of 125 +/- 75 reproduces experimental "
+					"results for olivine revolution pretty well "
+					"(Kaminski and Ribe 2001, epsl).");
+              prm.declare_entry("Nucleation parameter","5",Patterns::Double(0),
+					"Dimensionless nucleation parameter, lambda*. "
+					"A value of 5 is thought to be suitable for the "
+					"upper mantle, but the exact value does not "
+					"have a strong effect on LPO.");
+              prm.declare_entry("Volume fraction","0.3",Patterns::Double(0,1),
+					"Dimensionless volume fraction chi, defined as "
+					"the ratio of the initial size of grains over the "
+					"the size for which grain boundary sliding is "
+					"the dominant deformation mechanism. For grains "
+					"with a dimensionless volume smaller than chi, "
+					"strain energy is set to 0 and the grains do not "
+					"rotate by plastic deformation.");
+              prm.declare_entry("Resolved shear stresses","1, 2, 3, 1e60",
+					Patterns::List(Patterns::Double(0)),
+					"List of rerference dimensionless resolved shear stresses for "
+					"four olivine shear planes. The order is (010)[100], "
+					"(001)[100], (010)[001], (100)[001].");
+              prm.declare_entry("Stress exponent","3.5",Patterns::Double(0),
+					"Stress exponent for power-law rheology");
+            }
+            prm.leave_subsection();
+          }
+          prm.leave_subsection();
+        }
+        prm.leave_subsection();
+      }
+
+
+      template <int dim>
+      void
+      GrainOrientations<dim>::parse_parameters (ParameterHandler &prm)
+      {
+	 prm.enter_subsection("Postprocess");
+	 {
+	   prm.enter_subsection("Particles");
+	   {
+	     prm.enter_subsection("Grain orientations");
+	     {
+              n_grains = prm.get_integer("Number of grains");
+              mob = prm.get_double("Grain boundary mobility");
+              lam = prm.get_double("Nucleation parameter");
+              chi = prm.get_double("Volume fraction");
+              tau = Utilities::string_to_double(Utilities::split_string_list(prm.get("Resolved shear stresses")));
+              stress_exp = prm.get_double("Stress exponent");
+            }
+            prm.leave_subsection();
+          }
+          prm.leave_subsection();
+        }
+        prm.leave_subsection();
       }
     }
   }
