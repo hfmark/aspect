@@ -259,32 +259,21 @@ namespace aspect
 	Tensor<2,3> lij;  // initializes all entries to 0
 	if (dim==2)  // we need l(0,0), l(0,2), and l(2,0); l(1,1) is assumed to be 0 and l(2,2) is -l(0,0)-l(1,1)
 	{
-	for (unsigned int i=0; i<3; ++i)
-	  {
-	  for (unsigned int j=0; j<3; ++j)
-	    {
-	    if (i==0 && j==0) lij[i][j] = gradients[this->introspection().component_indices.velocities[0]][0];
-	    if (i==0 && j==2) lij[i][j] = gradients[this->introspection().component_indices.velocities[0]][1];
-	    if (i==2 && j==0) lij[i][j] = gradients[this->introspection().component_indices.velocities[1]][0];
-	    if (i==2 && j==2) lij[i][j] = -gradients[this->introspection().component_indices.velocities[0]][0];
-	    }
-	  }
-	} else {  // there's probably a more efficient way to fill this tensor?
-	for (unsigned int i=0; i<3; ++i)
-	  {
-	  for (unsigned int j=0; j<3; ++j)
-	    {
-	    if (i==0 && j==0) lij[i][j] = gradients[this->introspection().component_indices.velocities[0]][0];
-	    if (i==0 && j==1) lij[i][j] = gradients[this->introspection().component_indices.velocities[0]][1];
-	    if (i==0 && j==2) lij[i][j] = gradients[this->introspection().component_indices.velocities[0]][2];
-	    if (i==1 && j==0) lij[i][j] = gradients[this->introspection().component_indices.velocities[1]][0];
-	    if (i==1 && j==1) lij[i][j] = gradients[this->introspection().component_indices.velocities[1]][1];
-	    if (i==1 && j==2) lij[i][j] = gradients[this->introspection().component_indices.velocities[1]][2];
-	    if (i==2 && j==0) lij[i][j] = gradients[this->introspection().component_indices.velocities[2]][0];
-	    if (i==2 && j==1) lij[i][j] = gradients[this->introspection().component_indices.velocities[2]][1];
-	    if (i==2 && j==2) lij[i][j] = gradients[this->introspection().component_indices.velocities[2]][2];
-	    }
-	  }
+	lij[0][0] = gradients[this->introspection().component_indices.velocities[0]][0];
+	lij[0][2] = gradients[this->introspection().component_indices.velocities[0]][1];
+	lij[2][0] = gradients[this->introspection().component_indices.velocities[1]][0];
+	lij[2][2] = -gradients[this->introspection().component_indices.velocities[0]][0];
+	lij[1][2] = 0;  // this is explicit in the fortran version but seems unnecessary here?
+	} else {  // there's probably a more efficient way to fill this tensor
+	lij[0][0] = gradients[this->introspection().component_indices.velocities[0]][0];
+	lij[0][1] = gradients[this->introspection().component_indices.velocities[0]][1];
+	lij[0][2] = gradients[this->introspection().component_indices.velocities[0]][2];
+	lij[1][0] = gradients[this->introspection().component_indices.velocities[1]][0];
+	lij[1][1] = gradients[this->introspection().component_indices.velocities[1]][1];
+	lij[1][2] = gradients[this->introspection().component_indices.velocities[1]][2];
+	lij[2][0] = gradients[this->introspection().component_indices.velocities[2]][0];
+	lij[2][1] = gradients[this->introspection().component_indices.velocities[2]][1];
+	lij[2][2] = gradients[this->introspection().component_indices.velocities[2]][2];
 	}
 
 	// get eij (strain rate tensor) and eps0 (reference strain rate) from lij (velocity gradient tensor)
@@ -527,7 +516,8 @@ namespace aspect
 	  for (unsigned int j=0; j<3; ++j)
 	    {
 	    for (unsigned int k=0; k<3; ++k)
-	      {	// bigI sums eij (strain rate tensor) multiplied by unit vectors for slip dir [] and slip plane ()
+	      {
+		// bigI sums eij (strain rate tensor) multiplied by unit vectors for slip dir [] and slip plane ()
 		// for each of the 4 slip systems in olivine
 		bigI[0] = bigI[0] + ex[j][k]*acs_in[0][j]*acs_in[1][k]; // [100](010)
 		bigI[1] = bigI[1] + ex[j][k]*acs_in[0][j]*acs_in[2][k]; // [100](001)
@@ -608,9 +598,9 @@ namespace aspect
 
 	  // calculate rotation rate (omega in paper) (i+1, i+2, pacman around (0,1,2))
 	  std::array<double,3> rot = {0,0,0};
-	  rot[2] = (lx[1][0]-lx[0][1])/2.0 - ((g[1][0]-g[0][1])/2.0)*gam0;
-	  rot[1] = (lx[0][2]-lx[2][0])/2.0 - ((g[0][2]-g[2][0])/2.0)*gam0;
-	  rot[0] = (lx[2][1]-lx[1][2])/2.0 - ((g[2][1]-g[1][2])/2.0)*gam0;
+	  rot[2] = (lx[1][0]-lx[0][1])/2.0 - (g[1][0]-g[0][1])/2.0*gam0;
+	  rot[1] = (lx[0][2]-lx[2][0])/2.0 - (g[0][2]-g[2][0])/2.0*gam0;
+	  rot[0] = (lx[2][1]-lx[1][2])/2.0 - (g[2][1]-g[1][2])/2.0*gam0;
 
 	  // calculate derivatives of direction cosines
 	  Tensor<2,3> dot_acs;
