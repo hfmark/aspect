@@ -262,8 +262,7 @@ namespace aspect
 	lij[0][0] = gradients[this->introspection().component_indices.velocities[0]][0];
 	lij[0][2] = gradients[this->introspection().component_indices.velocities[0]][1];
 	lij[2][0] = gradients[this->introspection().component_indices.velocities[1]][0];
-	lij[2][2] = -gradients[this->introspection().component_indices.velocities[0]][0];
-	lij[1][2] = 0;  // this is explicit in the fortran version but seems unnecessary here?
+	lij[2][2] = gradients[this->introspection().component_indices.velocities[1]][1];
 	} else {  // there's probably a more efficient way to fill this tensor
 	lij[0][0] = gradients[this->introspection().component_indices.velocities[0]][0];
 	lij[0][1] = gradients[this->introspection().component_indices.velocities[0]][1];
@@ -532,14 +531,13 @@ namespace aspect
 	  for (unsigned int j=0; j<4; ++j) qab[j] = std::abs(bigI[j]/tau[j]);
 
 	  // sort I/tau to figure out which is the weakest slip system
-	  int imax = std::distance(qab.begin(), std::max_element(qab.begin(), qab.end()));
+	  int imax = std::max_element(qab.begin(),qab.end()) - qab.begin();
 	  qab[imax] = -1;
-	  int iint = std::distance(qab.begin(), std::max_element(qab.begin(), qab.end()));
+	  int iint = std::max_element(qab.begin(),qab.end()) - qab.begin();
 	  qab[iint] = -1;
-	  int imin = std::distance(qab.begin(), std::max_element(qab.begin(), qab.end()));
+	  int imin = std::max_element(qab.begin(),qab.end()) - qab.begin();
 	  qab[imin] = -1;
-	  int inac = std::distance(qab.begin(), std::max_element(qab.begin(), qab.end()));
-
+	  int inac = std::max_element(qab.begin(),qab.end()) - qab.begin();
 
 	  // calculate weighting factors (gam; beta in paper) relative to the value for which I/tau is largest
 	  gam[imax] = 1.;
