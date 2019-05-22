@@ -404,7 +404,7 @@ namespace aspect
 	    acs_odf_rt_i[11*i+j] = acs_test;
 	    }
 	  kacs_odf_rt_3[11*i+9] = dot_acs_odf_rt[11*i+9]*dt*eps0;
-	  odf_test = acs_odf_rt[11*i+9] + 0.5*kacs_odf_rt_3[11*i+9];
+	  odf_test = acs_odf_rt[11*i+9] + kacs_odf_rt_3[11*i+9];
 	  if (odf_test < 0) odf_test = 0;
 	  acs_odf_rt_i[11*i+9] = odf_test;
 	  odf_sum = odf_sum + odf_test;
@@ -604,23 +604,29 @@ namespace aspect
 
 	  // calculate derivatives of direction cosines
 	  Tensor<2,3> dot_acs;
-	  if (odf_in >= chi/n_grains)  // if not, dot_acs will be zeros as initialized
+	  for (unsigned int i1=0; i1<3; ++i1)
 	    {
+	    for (unsigned int i2=0; i2<3; ++i2)
+	      {
+	      for (unsigned int i3=0; i3<3; ++i3)
+	        {
+	        for (unsigned int i4=0; i4<3; ++i4)
+	          {
+                 dot_acs[i1][i2] = dot_acs[i1][i2] + eijk[i2][i3][i4]*acs_in[i1][i4]*rot[i3];
+	          }
+	        }
+	      }
+	    }
+         if (odf_in < chi/n_grains)  // if not, dot_acs will be zeros as initialized
+           {
+           rt_out = 0; // for small grains (volume fraction below threshold), strain energy goes to 0
 	    for (unsigned int i1=0; i1<3; ++i1)
 	      {
 	      for (unsigned int i2=0; i2<3; ++i2)
 	        {
-	        for (unsigned int i3=0; i3<3; ++i3)
-	          {
-	          for (unsigned int i4=0; i4<3; ++i4)
-	            {
-		    dot_acs[i1][i2] = dot_acs[i1][i2] + eijk[i2][i3][i4]*acs_in[i1][i4]*rot[i3];
-	            }
-	          }
-	        }
-	      }
-	    } else {
-		rt_out = 0; // for small grains (volume fraction below threshold), strain energy goes to 0
+               dot_acs[i1][i2] = 0;
+               }
+             }
 	    }
 
 	  Emean = Emean + odf_in*rt_out;  // add to vol-averaged strain energy
