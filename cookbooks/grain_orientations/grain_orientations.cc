@@ -260,8 +260,13 @@ namespace aspect
 	if (dim==2)  // we need l(0,0), l(0,2), and l(2,0); l(1,1) is assumed to be 0 and l(2,2) is -l(0,0)-l(1,1)
 	{
 	lij[0][0] = gradients[this->introspection().component_indices.velocities[0]][0];
+       lij[0][1] = 0;
 	lij[0][2] = gradients[this->introspection().component_indices.velocities[0]][1];
+       lij[1][0] = 0;
+       lij[1][1] = 0;
+       lij[1][2] = 0;
 	lij[2][0] = gradients[this->introspection().component_indices.velocities[1]][0];
+       lij[2][1] = 0;
 	lij[2][2] = gradients[this->introspection().component_indices.velocities[1]][1];
 	} else {  // there's probably a more efficient way to fill this tensor
 	lij[0][0] = gradients[this->introspection().component_indices.velocities[0]][0];
