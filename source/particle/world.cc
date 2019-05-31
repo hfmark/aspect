@@ -170,6 +170,7 @@ namespace aspect
         [&] (typename parallel::distributed::Triangulation<dim> &)
       {
         this->apply_particle_per_cell_bounds();
+        this->apply_regeneration_criterion();
       });
 
       signals.post_resume_load_user_data.connect(
@@ -320,6 +321,95 @@ namespace aspect
           particle_handler->update_cached_numbers();
         }
     }
+
+
+
+// NEW STUFF
+
+    template <int dim>
+    void
+    World<dim>::apply_regeneration_criterion()
+    {
+      // If we're using an ascii particle generator and have asked to regenerate particles
+      if (is_ascii_generator & regenerate_particles)
+        {
+        // First check if the regeneration criterion has been met (ie, if we've lost
+        // enough particles that we need to add some more)
+        particle_handler->update_cached_numbers();
+        if (particle_handler->n_global_particles() < min_particles_for_regeneration)
+          {
+
+          // we use the same ascii file as for the initial particle generation
+          const std::string filename = ascii_file_directory+ascii_file_name;
+
+          // read in the particle location specs and distribute among processes
+          std::istringstream in(Utilities::read_and_distribute_file_content(filename, this->get_mpi_communicator()));
+
+          // skip any header lines
+          while (in.peek() == '#')
+            {
+            std::string temp;
+            std::getline(in,temp);
+            }
+
+          // Determine the starting particle index by finding the highest existing particle index.
+          // Indices are linked to order in the ascii file, so we don't need to know
+          // which processes the particles are going to a priori (I think)
+          types::particle_index next_particle_index = particle_handler->get_next_free_particle_index();
+
+          Point<dim> particle_position;
+          // read the non-header lines and try to add particles
+          while (in >> particle_position)
+            {
+            try
+              {
+              std::pair<const typename parallel::distributed::Triangulation<dim>::active_cell_iterator,
+                  Point<dim> > it =
+                  GridTools::find_active_cell_around_point<> (this->get_mapping(), 
+                  this->get_triangulation(), particle_position);
+              if (it.first->is_locally_owned())
+                {
+                // make sure we're not making *too* many particles here
+                AssertThrow (next_particle_index <= std::numeric_limits<types::particle_index>::max(),
+                       ExcMessage("There is no free particle index left to generate a new particle id. "
+                                  "Please check if your model generates unusually many new particles "
+                                  "(by repeatedly deleting and regenerating particles), or "
+                                  "recompile deal.II with the DEAL_II_WITH_64BIT_INDICES "
+                                  "option enabled, to use 64-bit integers for particle ids."));
+
+                // and if that's all ok, make the particle
+                std::pair<Particles::internal::LevelInd,Particles::Particle<dim> > new_particle = 
+                    generator->generate_particle(it.first,next_particle_index);
+
+                // initialize its properties with the plugin inialization functions (not interpolation)
+                const std::vector<double> particle_properties =
+                  property_manager->initialize_late_particle_nointerp(new_particle.second.get_location());
+
+                // add to the handler
+                typename ParticleHandler<dim>::particle_iterator particle = particle_handler->insert_particle(new_particle.second,
+                         typename parallel::distributed::Triangulation<dim>::cell_iterator (&this->get_triangulation(),
+                                                                                            new_particle.first.first,
+                                                                                            new_particle.first.second));
+                // and set properties
+                particle->set_properties(particle_properties);
+
+                }
+
+              ++next_particle_index; // increment whether or not we added the particle on this process
+
+              }
+            catch (GridTools::ExcPointNotFound<dim> &)  // if point is outside the mesh, skip it
+              {}
+            }
+          }
+        }
+      particle_handler->update_cached_numbers();
+    }
+//
+
+
+
+
 
     template <int dim>
     unsigned int
@@ -891,6 +981,33 @@ namespace aspect
                                        + ">. This value does not correspond to any known load balancing strategy. Possible values "
                                        "are listed in the corresponding manual subsection."));
             }
+
+
+
+
+// NEW STUFF
+       if (prm.get("Particle generator name") == "ascii file")
+         {
+         is_ascii_generator = true;
+         prm.enter_subsection("Generator");
+           {
+           prm.enter_subsection("Ascii file");
+             {
+             regenerate_particles = prm.get_bool("Regenerate particles");
+             min_particles_for_regeneration = prm.get_integer("Minimum number of active particles");
+
+             ascii_file_directory = Utilities::expand_ASPECT_SOURCE_DIR(prm.get("Data directory"));
+             ascii_file_name = prm.get("Data file name");
+             }
+           prm.leave_subsection();
+           }
+         prm.leave_subsection();
+         } else {
+         is_ascii_generator = false;
+         }
+//
+
+
 
         }
         prm.leave_subsection ();

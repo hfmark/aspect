@@ -87,6 +87,21 @@ namespace aspect
                 prm.declare_entry ("Data file name", "particle.dat",
                                    Patterns::Anything (),
                                    "The name of the particle file.");
+// NEW STUFF
+
+                prm.declare_entry ("Regenerate particles","false",
+                                   Patterns::Bool (),
+                                   "Whether or not to create new particles periodically "
+                                   "during the simulation based on an ascii file and "
+                                   "a minimum # of active particles");
+
+                prm.declare_entry ("Minimum number of active particles","3",
+                                   Patterns::Integer (1),
+                                   "Minimum number of active particles to trigger "
+                                   "particle regeneration.");
+//
+
+
                 prm.leave_subsection();
               }
               prm.leave_subsection();

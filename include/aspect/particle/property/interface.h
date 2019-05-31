@@ -504,6 +504,21 @@ namespace aspect
                                     const Interpolator::Interface<dim> &interpolator,
                                     const typename parallel::distributed::Triangulation<dim>::active_cell_iterator &cell = typename parallel::distributed::Triangulation<dim>::active_cell_iterator()) const;
 
+
+
+// NEW STUFF
+          /**
+           * Initialization function for particle properties. This function is
+           * called once for each of the particles of a particle
+           * collection that were created later than the initial particle
+           * generation, but does not use interpolation
+           */
+          std::vector<double>
+          initialize_late_particle_nointerp (const Point<dim> &particle_location) const;
+//
+
+
+
           /**
            * Update function for particle properties. This function is
            * called once every time step for every particle.

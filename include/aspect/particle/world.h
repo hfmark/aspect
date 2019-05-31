@@ -309,6 +309,25 @@ namespace aspect
         void
         apply_particle_per_cell_bounds();
 
+
+
+// NEW STUFF
+       /**
+         * Check if criterion for particle regeneration has been met, and if
+         * so, add a new set of particles from the ascii file
+         */
+        void
+        apply_regeneration_criterion();
+
+        bool is_ascii_generator;  // to check if the particle generator is ascii file
+        bool regenerate_particles; // whether or not to re-apply the ascii generator
+        unsigned int min_particles_for_regeneration;  // threshold # of active particles
+        std::string ascii_file_directory;  // file location
+        std::string ascii_file_name;       // and name
+//
+
+
+
         /**
          * TODO: Implement this for arbitrary meshes.
          * This function checks if the @p lost_particles moved across a

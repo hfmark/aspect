@@ -343,6 +343,39 @@ namespace aspect
         return particle_properties;
       }
 
+
+
+
+
+// NEW STUFF
+      template <int dim>
+      std::vector<double>
+      Manager<dim>::initialize_late_particle_nointerp (const Point<dim> &particle_location) const
+      {
+        if (property_information.n_components() == 0)
+          return std::vector<double>();
+
+        std::vector<double> particle_properties;
+        particle_properties.reserve(property_information.n_components());
+
+        unsigned int property_index = 0;
+        for (typename std::list<std::shared_ptr<Interface<dim> > >::const_iterator
+             p = property_list.begin(); p!=property_list.end(); ++p, ++property_index)
+          {
+          (*p)->initialize_one_particle_property(particle_location,
+                                                 particle_properties);
+          }
+
+        Assert (particle_properties.size() == property_information.n_components(), ExcInternalError());
+
+        return particle_properties;
+      }
+
+//
+
+
+
+
       template <int dim>
       void
       Manager<dim>::update_one_particle (typename ParticleHandler<dim>::particle_iterator &particle,
