@@ -95,10 +95,6 @@ namespace aspect
                                    "during the simulation based on an ascii file and "
                                    "a minimum # of active particles");
 
-                prm.declare_entry ("Minimum number of active particles","3",
-                                   Patterns::Integer (1),
-                                   "Minimum number of active particles to trigger "
-                                   "particle regeneration.");
 //
 
 

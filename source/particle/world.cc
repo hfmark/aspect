@@ -170,13 +170,17 @@ namespace aspect
         [&] (typename parallel::distributed::Triangulation<dim> &)
       {
         this->apply_particle_per_cell_bounds();
-        this->apply_regeneration_criterion();
       });
 
       signals.post_resume_load_user_data.connect(
         [&] (typename parallel::distributed::Triangulation<dim> &)
       {
         this->apply_particle_per_cell_bounds();
+
+// NEW STUFF
+        this->apply_regeneration_criterion();
+//
+
       });
 
       if (update_ghost_particles &&
@@ -336,8 +340,6 @@ namespace aspect
         // First check if the regeneration criterion has been met (ie, if we've lost
         // enough particles that we need to add some more)
         particle_handler->update_cached_numbers();
-        if (particle_handler->n_global_particles() < min_particles_for_regeneration)
-          {
 
           // we use the same ascii file as for the initial particle generation
           const std::string filename = ascii_file_directory+ascii_file_name;
@@ -401,7 +403,6 @@ namespace aspect
             catch (GridTools::ExcPointNotFound<dim> &)  // if point is outside the mesh, skip it
               {}
             }
-          }
         }
       particle_handler->update_cached_numbers();
     }
@@ -994,7 +995,6 @@ namespace aspect
            prm.enter_subsection("Ascii file");
              {
              regenerate_particles = prm.get_bool("Regenerate particles");
-             min_particles_for_regeneration = prm.get_integer("Minimum number of active particles");
 
              ascii_file_directory = Utilities::expand_ASPECT_SOURCE_DIR(prm.get("Data directory"));
              ascii_file_name = prm.get("Data file name");

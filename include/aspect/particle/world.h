@@ -321,7 +321,6 @@ namespace aspect
 
         bool is_ascii_generator;  // to check if the particle generator is ascii file
         bool regenerate_particles; // whether or not to re-apply the ascii generator
-        unsigned int min_particles_for_regeneration;  // threshold # of active particles
         std::string ascii_file_directory;  // file location
         std::string ascii_file_name;       // and name
 //
