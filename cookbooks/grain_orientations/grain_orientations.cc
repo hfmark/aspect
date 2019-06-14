@@ -134,6 +134,13 @@ namespace aspect
 				 double &eps0,
 				 unsigned int &n_grains,
 				 std::vector<double> &acs_odf_rt) const;
+        unsigned int ijkl_ind(unsigned int &i, unsigned int &j) const;
+        Tensor<4,3> get_Cijkl_ol() const;
+        Tensor<4,3> voigt_avg(std::vector<double> &acs_odf_rt,
+                              unsigned int &n_grains) const;
+        Tensor<2,6> reduce_81_36(Tensor<4,3> &Cav) const;
+        //std::vector<double> a_axis(Tensor<4,3> &Cav) const;
+
 
         double stress_exp;  // stress exponent for power law rheology
         double mob;  // grain boundary mobility M*
@@ -221,6 +228,12 @@ namespace aspect
 	  // push back initial strain energy (starts at 0)
 	  data.push_back(0);
 	  }
+
+      for (int i=0; i<6; ++i)
+      for (int j=0; j<6; ++j)
+        {
+        data.push_back(0);  // initial Sav, voigt-averaged elastic tensor
+        }
 
       }
 
@@ -469,6 +482,16 @@ namespace aspect
 	  data[pos] = acs_odf_rt[i];
 	  pos = pos + 1;
 	  }
+      Tensor<4,3> Cav = voigt_avg(acs_odf_rt, n_grains);
+      Tensor<2,6> Sav = reduce_81_36(Cav);
+      for (int i=0; i<6; ++i)
+        {
+      for (int j=0; j<6; ++j)
+        {
+        data[pos] = Sav[i][j];
+        pos = pos + 1;
+        }
+        }
       }
 
       template <int dim>
@@ -659,6 +682,133 @@ namespace aspect
 	return dot_all;
       }
 
+
+      template <int dim>
+      Tensor<4,3>
+      GrainOrientations<dim>::
+      get_Cijkl_ol () const
+      {
+      Tensor<4,3> Cijkl_ol;
+      Cijkl_ol[0][0][0][0] = 320.71;
+      Cijkl_ol[0][0][1][1] = 69.74;
+      Cijkl_ol[0][0][2][2] = 71.22;
+      Cijkl_ol[0][1][0][1] = 78.36;
+      Cijkl_ol[0][1][1][0] = 78.36;
+      Cijkl_ol[0][2][0][2] = 77.67;
+      Cijkl_ol[0][2][2][0] = 77.67;
+      Cijkl_ol[1][0][0][1] = 78.36;
+      Cijkl_ol[1][0][1][0] = 78.36;
+      Cijkl_ol[1][1][0][0] = 69.84;
+      Cijkl_ol[1][1][1][1] = 197.25;
+      Cijkl_ol[1][1][2][2] = 74.80;
+      Cijkl_ol[1][2][1][2] = 63.77;
+      Cijkl_ol[1][2][2][1] = 63.77;
+      Cijkl_ol[2][0][0][2] = 77.67;
+      Cijkl_ol[2][0][2][0] = 77.67;
+      Cijkl_ol[2][1][1][2] = 63.77;
+      Cijkl_ol[2][1][2][1] = 63.77;
+      Cijkl_ol[2][2][0][0] = 71.22;
+      Cijkl_ol[2][2][1][1] = 74.80;
+      Cijkl_ol[2][2][2][2] = 234.32;
+
+      return Cijkl_ol;
+      }
+
+      template <int dim>
+      unsigned int 
+      GrainOrientations<dim>::
+      ijkl_ind(unsigned int &i, unsigned int &j) const
+      {
+      Tensor<2,3> ijkl;
+      ijkl[0][0] = 0;
+      ijkl[0][1] = 5;
+      ijkl[0][2] = 4;
+      ijkl[1][0] = 5;
+      ijkl[1][1] = 1;
+      ijkl[1][2] = 3;
+      ijkl[2][0] = 4;
+      ijkl[2][1] = 3;
+      ijkl[2][2] = 2;
+
+      return ijkl[i][j];
+      }
+
+      template <int dim>
+      Tensor<4,3> 
+      GrainOrientations<dim>::
+      voigt_avg(std::vector<double> &acs_odf_rt,
+                unsigned int &n_grains) const
+      {
+      Tensor<4,3> C0 = get_Cijkl_ol();
+      Tensor<4,3> Cav;
+
+      for (unsigned int ng=0; ng<n_grains; ++ng)
+        {
+         // retrieve the parameters for this grain
+	  Tensor<2,3> acs_in;
+	  acs_in[0][0] = acs_odf_rt[11*ng];
+	  acs_in[0][1] = acs_odf_rt[11*ng+1];
+	  acs_in[0][2] = acs_odf_rt[11*ng+2];
+	  acs_in[1][0] = acs_odf_rt[11*ng+3];
+	  acs_in[1][1] = acs_odf_rt[11*ng+4];
+	  acs_in[1][2] = acs_odf_rt[11*ng+5];
+	  acs_in[2][0] = acs_odf_rt[11*ng+6];
+	  acs_in[2][1] = acs_odf_rt[11*ng+7];
+	  acs_in[2][2] = acs_odf_rt[11*ng+8];
+	  double odf_in = acs_odf_rt[11*ng+9];
+
+        Tensor<4,3> Cav2;
+
+        for (int i=0; i<3; ++i)
+          {
+        for (int j=0; j<3; ++j)
+          {
+        for (int k=0; k<3; ++k)
+          {
+        for (int l=0; l<3; ++l)
+          {
+          for (int p=0; p<3; ++p)
+            {
+          for (int q=0; q<3; ++q)
+            {
+          for (int r=0; r<3; ++r)
+            {
+          for (int s=0; s<3; ++s)
+            {
+            Cav2[i][j][k][l] = Cav2[i][j][k][l] +
+                               acs_in[p][i]*acs_in[q][j]*acs_in[r][k]*acs_in[s][l]*C0[p][q][r][s];
+            }
+            }
+            }
+            }
+          Cav[i][j][k][l] = Cav[i][j][k][l] + Cav2[i][j][k][l]*odf_in;
+          }
+          }
+          }
+          }
+        }
+      return Cav;
+      }
+
+      template <int dim>
+      Tensor<2,6>
+      GrainOrientations<dim>::
+      reduce_81_36(Tensor<4,3> &Cav) const
+      {
+      std::array<double,6> l1 = {0,1,2,1,2,0};
+      std::array<double,6> l2 = {0,1,2,2,0,1};
+      Tensor<2,6> Sav;
+      for (int i=0; i<6; ++i)
+        {
+      for (int j=0; j<6; ++j)
+        {
+        Sav[i][j] = Cav[l1[i]][l2[i]][l1[j]][l2[j]];
+        }
+        }
+
+      return Sav;
+      }
+
       template <int dim>
       UpdateTimeFlags
       GrainOrientations<dim>::need_update() const
@@ -696,6 +846,14 @@ namespace aspect
 	  property_information.emplace_back("odf_"+std::to_string(i),1);
 	  property_information.emplace_back("rt_"+std::to_string(i),1);
 	  }
+
+      for (int i=0; i<6; ++i)
+        {
+      for (int j=0; j<6; ++j)
+        {
+        property_information.emplace_back("Sav_"+std::to_string(i)+'_'+std::to_string(j),1);
+        }
+        }
 	  
 	return property_information;
       }
