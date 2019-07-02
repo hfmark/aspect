@@ -250,6 +250,10 @@ namespace aspect
 
 	unsigned int n_grains = data[data_position];  // retrieve n_grains for parsing the rest
 
+       // set up the resolved shear stresses, taking position and an adhoc dehydration boundary into account:
+       // use hydrous values until particles are above 70 km, then phase in dry values with an erf over
+       // a hard-coded transition width (10 km? 20?)
+       // TODO: neaten the 2D vs 3D cases to avoid redundancy
        std::vector<double> tau_pos(4,0);
        std::vector<double> tau_dry(4,0);
        tau_dry[0] = 1;
@@ -262,13 +266,25 @@ namespace aspect
          if (max_dep - position[1] < 7e4)
            {
            double diff = 7e4 - (max_dep - position[1]);
-           double factor = erf(diff/2e4);  // 10 km transition? 20?
+           double factor = erf(diff/2e4); // transition width
            for (unsigned int i=0; i<4; ++i)
              {
              tau_pos[i] = (1-factor)*tau[i] + factor*tau_dry[i];
              }
            }
+         } else if (dim==3) {
+         if (max_dep - position[2] < 7e4)
+           {
+           double diff = 7e4 - (max_dep - position[1]);
+           double factor = erf(diff/2e4); // transition width
+           for (unsigned int i=0; i<4; ++i)
+             {
+             tau_pos[i] = (1-factor)*tau[i] + factor*tau_dry[i];
+             } 
+           }
          }
+
+       //std::cout << tau_pos[0] << " " << tau_pos[1] << " " << tau_pos[2] << " " << tau_pos[3] << " ";
 
 	// retrieve Fij (finite train tensor, 3x3)
 	Tensor<2,3> Fij;
