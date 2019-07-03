@@ -132,6 +132,8 @@ namespace aspect
         {
         data.push_back(position[i]);
         }
+       // time
+       data.push_back(this->get_timestep());
 
 	// lij (local velocity gradient tensor) is 3D even in 2D flow because we're
 	// eventually using this to play with 3D aggregates
@@ -186,6 +188,9 @@ namespace aspect
          pos = pos + 1;
          }
 
+       data[pos] = this->get_timestep();
+       pos = pos + 1;
+
 	for (unsigned int i=0; i<3; ++i)
 	  {
 	  for (unsigned int j=0; j<3; ++j)
@@ -216,6 +221,7 @@ namespace aspect
       {
 
        std::vector<std::pair<std::string,unsigned int> > property_information (1,std::make_pair("position",dim));
+       property_information.emplace_back("time",1);
 
 	for (unsigned int i=0; i<3; ++i)
 	  {
